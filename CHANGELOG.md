@@ -1,9 +1,32 @@
 # Changelog
 
-All notable changes to `@martsallan/goal-opencode` are documented here.
+All notable changes to `goal-opencode` are documented here. Versions up to 0.3.1 were published upstream as `@martsallan/goal-opencode`.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-10-12
+
+OpenCode 2 port. This release targets OpenCode >= 2.0.26 only; OpenCode 1.x users should stay on `@martsallan/goal-opencode@0.3.1`.
+
+### Changed
+- Rewrote the server entry on the OpenCode 2 plugin API (`{ id, setup(ctx) }`): `/goal` is a `ctx.command` executor, `update_goal` is a direct tool registered through `ctx.tool.transform`, and lifecycle tracking uses `ctx.event.subscribe`.
+- Goal state now lives in the session metadata under the `goal-opencode` key instead of a JSON state file, so the server and the TUI share it without file paths and it works against remote servers.
+- The goal protocol is injected as a system part through `ctx.session.hook("context")` on every model request while a goal is active; continuation turns are short `session.synthetic` messages that resume the session.
+- Continuation triggers on `session.execution.succeeded`; user interrupts and failures arrive as `session.execution.interrupted` / `session.execution.failed`.
+- Stagnation now counts continuations that finished without any tool call.
+- `::GOAL_DONE::` clears a goal only after `update_goal` marked it complete.
+- Rewrote the TUI entry on the OpenCode 2 TUI API: sidebar via `ui.slot` on `sidebar.content`, palette command via `keymap.layer`, toasts from server notices carried in the same metadata key.
+- Plugin state is kept per location in a process-wide registry, so hot reloads keep running goals active; a fresh server process still demotes active goals to paused (interrupted).
+
+### Removed
+- JSON state file, `GOAL_OPENCODE_STATE_FILE`, process signal handlers, and the hidden trigger message plus `experimental.chat.messages.transform` injection.
+- Runtime dependencies on `@opencode-ai/plugin` and `@opencode-ai/sdk`; the host provides `@opentui/*` and `solid-js`.
+- npm publish workflow; install from Git.
+
+### Added
+- `GOAL_OPENCODE_DEBUG=1` prints decision traces to the server stderr.
+- Unit tests for metadata parsing, interrupt demotion, live elapsed time, status labels and the compaction context.
 
 ## [0.3.1] - 2026-06-11
 

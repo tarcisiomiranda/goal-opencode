@@ -1,8 +1,8 @@
 {
-  "name": "@martsallan/goal-opencode",
-  "version": "0.3.1",
+  "name": "goal-opencode",
+  "version": "1.0.0",
   "type": "module",
-  "description": "Long-running goal mode for OpenCode with auto-continuation, auto-clear on completion, and a goal sidebar widget",
+  "description": "Long-running /goal mode for OpenCode 2 with auto-continuation, completion detection and a goal sidebar widget",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -26,31 +26,27 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martsallan/goal-opencode.git"
+    "url": "git+https://github.com/tarcisiomiranda/goal-opencode.git"
   },
-  "homepage": "https://github.com/martsallan/goal-opencode#readme",
+  "homepage": "https://github.com/tarcisiomiranda/goal-opencode#readme",
   "bugs": {
-    "url": "https://github.com/martsallan/goal-opencode/issues"
+    "url": "https://github.com/tarcisiomiranda/goal-opencode/issues"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
-  "dependencies": {
-    "@opencode-ai/plugin": "^1.17.3",
-    "@opencode-ai/sdk": "^1.17.3"
-  },
   "peerDependencies": {
-    "@opentui/core": ">=0.3.4",
-    "@opentui/keymap": ">=0.3.4",
-    "@opentui/solid": ">=0.3.4",
-    "solid-js": "^1.9.12"
+    "@opentui/core": ">=0.5.8",
+    "@opentui/solid": ">=0.5.8",
+    "solid-js": ">=1.9.0"
   },
   "devDependencies": {
-    "@opentui/core": "0.4.0",
-    "@opentui/keymap": "0.4.0",
-    "@opentui/solid": "0.4.0",
-    "@types/bun": "^1.3.14",
+    "@opencode/plugin": "2.0.26",
+    "@opencode/theme": "2.0.26",
+    "@opentui/core": "0.5.17",
+    "@opentui/solid": "0.5.17",
+    "@types/bun": "^1.3.11",
     "@types/node": "^25.8.0",
     "solid-js": "1.9.12",
     "typescript": "^5.9.3"

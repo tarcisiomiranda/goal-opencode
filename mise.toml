@@ -1,0 +1,18 @@
+[tools]
+bun = "1.3.11"
+
+[tasks.install]
+description = "Instala dependencias de dev"
+run = "bun install"
+
+[tasks.test]
+description = "Testes unitarios"
+run = "bun test"
+
+[tasks.typecheck]
+description = "Typecheck TypeScript"
+run = "bun x tsc --noEmit"
+
+[tasks.check]
+description = "Typecheck + testes"
+depends = ["typecheck", "test"]

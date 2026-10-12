@@ -1,59 +1,10 @@
-import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui"
-import { createMemo, createSignal, onCleanup, Show } from "solid-js"
-import { readFileSync } from "node:fs"
-import { createHash } from "node:crypto"
-import { homedir } from "node:os"
-import { join } from "node:path"
+import type { Plugin } from "@opencode/plugin/tui"
+import { createSignal, onCleanup, Show } from "solid-js"
+import { formatGoalSummary, liveSeconds, readGoalMetadata, statusLine, type GoalState } from "./core.js"
 
-// ──────────────────────────────────────────────
-// Sidebar widget for the goal-opencode plugin.
-// state file: $XDG_STATE_HOME/goal-opencode/scope_<sha256-16>/sessions.json
-// shape:      { [sessionID]: GoalState }
-// ──────────────────────────────────────────────
-type GoalStatus = "active" | "paused" | "complete"
-type GoalPauseReason = "interrupt" | "command"
+type Context = Plugin.Context
 
-type GoalState = {
-  objective: string
-  status: GoalStatus
-  createdAt: number
-  updatedAt: number
-  activeStartedAt: number | null
-  timeUsedSeconds: number
-  pauseReason?: GoalPauseReason
-}
-
-const STATE_FILE_ENV = "GOAL_OPENCODE_STATE_FILE"
-
-function stableID(prefix: string, seed: string): string {
-  return `${prefix}_${createHash("sha256").update(seed).digest("hex").slice(0, 16)}`
-}
-
-function defaultStateFile(scope: string): string {
-  const root = process.env.XDG_STATE_HOME || join(homedir(), ".local", "state")
-  return join(root, "goal-opencode", stableID("scope", scope), "sessions.json")
-}
-
-function resolveStateFile(api: TuiPluginApi): string {
-  const env = process.env[STATE_FILE_ENV]
-  if (env) return env
-  const path = api.state.path
-  const scope = String(path.worktree ?? path.directory ?? process.cwd())
-  return defaultStateFile(scope)
-}
-
-function readStateSync(stateFile: string): Record<string, GoalState> {
-  try {
-    const raw = readFileSync(stateFile, "utf8")
-    const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, GoalState>
-    }
-  } catch {
-    // arquivo ausente, JSON corrompido, etc -> sidebar fica vazia
-  }
-  return {}
-}
+const OBJECTIVE_PREVIEW = 200
 
 function formatDuration(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds))
@@ -64,165 +15,96 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
-const STATUS_LABEL: Record<GoalStatus, string> = {
-  active: "Active",
-  paused: "Paused",
-  complete: "Complete",
+const goalOf = (ctx: Context, sessionID: string): GoalState | null => readGoalMetadata(ctx.data.session.get(sessionID)?.metadata).goal
+
+function statusColor(ctx: Context, goal: GoalState) {
+  const feedback = ctx.theme.text.feedback
+  if (goal.status === "complete") return feedback.success.muted
+  if (goal.status === "paused") return goal.pauseReason === "interrupt" ? feedback.info.base : feedback.warning.base
+  return feedback.success.base
 }
 
-function statusLine(g: GoalState): string {
-  if (g.status === "paused") {
-    if (g.pauseReason === "interrupt") return "Paused (interrupted — next message resumes)"
-    if (g.pauseReason === "command") return "Paused (manual)"
-    return "Paused"
-  }
-  return STATUS_LABEL[g.status]
-}
-
-// ──────────────────────────────────────────────
-// Sidebar component
-// ──────────────────────────────────────────────
-function GoalSidebar(props: { api: TuiPluginApi; sessionID: string }) {
-  const theme = () => props.api.theme.current
-  const stateFile = resolveStateFile(props.api)
-
-  // tick a cada 1s para atualizar elapsed e re-ler o arquivo
-  const [tick, setTick] = createSignal(Math.floor(Date.now() / 1000))
-  const timer = setInterval(() => setTick(Math.floor(Date.now() / 1000)), 1000)
+function GoalSidebar(props: { ctx: Context; sessionID: string }) {
+  const [now, setNow] = createSignal(Date.now())
+  const timer = setInterval(() => setNow(Date.now()), 1000)
   onCleanup(() => clearInterval(timer))
 
-  const goals = createMemo(() => {
-    void tick()
-    return readStateSync(stateFile)
-  })
-  const myGoal = createMemo<GoalState | undefined>(() => goals()[props.sessionID])
+  const goal = () => {
+    now()
+    return goalOf(props.ctx, props.sessionID)
+  }
 
   return (
-    <Show when={myGoal()}>
-      {(goal) => {
-        const nowSec = () => tick()
-        const elapsed = () => {
-          const g = goal()
-          if (g.status === "active" && g.activeStartedAt != null) {
-            const startSec = Math.floor(g.activeStartedAt / 1000)
-            return g.timeUsedSeconds + Math.max(0, nowSec() - startSec)
-          }
-          return g.timeUsedSeconds
-        }
-
-        return (
-          <box flexDirection="column" marginTop={1}>
-            <text fg={theme().text}>
-              <b>🎯 Goal</b>
-            </text>
-            <text fg={theme().textMuted}>
-              {goal().objective.slice(0, 200)}
-              {goal().objective.length > 200 ? "…" : ""}
-            </text>
-            <text fg={
-              goal().status === "complete" ? theme().primary :
-              goal().status === "paused"
-                ? (goal().pauseReason === "interrupt" ? theme().info : theme().warning)
-                : theme().success
-            }>
-              ● {statusLine(goal())}
-            </text>
-            <text fg={theme().textMuted}>
-              ⏱ {formatDuration(elapsed())}
-            </text>
-          </box>
-        )
-      }}
+    <Show when={goal()}>
+      {(current) => (
+        <box flexDirection="column" marginTop={1}>
+          <text fg={props.ctx.theme.text.base}>
+            <b>🎯 Goal</b>
+          </text>
+          <text fg={props.ctx.theme.text.muted}>
+            {current().objective.slice(0, OBJECTIVE_PREVIEW)}
+            {current().objective.length > OBJECTIVE_PREVIEW ? "…" : ""}
+          </text>
+          <text fg={statusColor(props.ctx, current())}>● {statusLine(current())}</text>
+          <text fg={props.ctx.theme.text.muted}>⏱ {formatDuration(liveSeconds(current(), now()))}</text>
+        </box>
+      )}
     </Show>
   )
 }
 
-// ──────────────────────────────────────────────
-// Main TUI plugin
-// ──────────────────────────────────────────────
-const tui: TuiPlugin = async (api, _options, _meta) => {
-  api.slots.register({
-    order: 125,
-    slots: {
-      sidebar_content(_ctx, props) {
-        const sid = props.session_id
-        if (!sid) return null
-        return <GoalSidebar api={api} sessionID={sid} />
-      },
-    },
+function setup(ctx: Context) {
+  const removeSlot = ctx.ui.slot({
+    append: "sidebar.content",
+    render: (input) => <GoalSidebar ctx={ctx} sessionID={input.sessionID} />,
   })
 
-  // Opens the goal dialog for the active session. Shared by the modern keymap
-  // command layer and the legacy api.command fallback below.
-  const showGoalDialog = () => {
-    const route = api.route.current
-    let sid: string | undefined
-    if (route.name === "session") {
-      sid = typeof route.params?.sessionID === "string" ? route.params.sessionID : undefined
-    }
-    if (!sid) return
-    const stateFile = resolveStateFile(api)
-    const goals = readStateSync(stateFile)
-    const goal = goals[sid]
+  const seen = new Map<string, string>()
+  const stopNotices = ctx.data.on("session.metadata.updated", (event) => {
+    const { sessionID, metadata } = event.data
+    const note = readGoalMetadata(metadata).notice
+    if (!note || seen.get(sessionID) === note.id) return
+    seen.set(sessionID, note.id)
+    ctx.ui.toast.show({ title: "Goal", message: note.message, variant: note.variant, duration: note.variant === "error" ? 8000 : 5000, sessionID })
+  })
+
+  const currentSession = () => {
+    const route = ctx.ui.router.current()
+    return route.type === "session" ? route.sessionID : undefined
+  }
+
+  const showGoal = () => {
+    const sessionID = currentSession()
+    if (!sessionID) return
+    const goal = goalOf(ctx, sessionID)
     if (!goal) {
-      api.ui.toast({ title: "Goal", message: "No goal set for this session.", variant: "info", duration: 3000 })
+      ctx.ui.toast.show({ title: "Goal", message: "No goal set for this session.", variant: "info", duration: 3000 })
       return
     }
-    api.ui.dialog.setSize("large")
-    api.ui.dialog.replace(() => (
-      <box flexDirection="column">
-        <text fg={api.theme.current.primary}>
-          <b>🎯 {goal.objective}</b>
-        </text>
-        <text fg={api.theme.current.textMuted}>
-          Status: {statusLine(goal)}
-        </text>
-        <text fg={api.theme.current.textMuted}>
-          Time: {formatDuration(goal.timeUsedSeconds)}
-        </text>
-      </box>
-    ))
-    setTimeout(() => api.ui.dialog.clear(), 8000)
+    void ctx.ui.dialog.alert({ title: "🎯 Goal", message: formatGoalSummary(goal) })
   }
 
-  // Prefer the modern keymap command layer (OpenCode >= 1.16). Fall back to the
-  // deprecated api.command bridge so the plugin still works on older hosts.
-  const keymap = api.keymap as { registerLayer?: (layer: unknown) => () => void } | undefined
-  if (typeof keymap?.registerLayer === "function") {
-    const dispose = keymap.registerLayer({
-      commands: [
-        {
-          name: "goal.show",
-          title: "Goal",
-          category: "Goal",
-          description: "Show the active goal for the current session",
-          namespace: "palette",
-          enabled: () => api.route.current.name === "session",
-          run: () => {
-            showGoalDialog()
-          },
-        },
-      ],
-    })
-    api.lifecycle.onDispose(dispose)
-  } else if (api.command) {
-    const dispose = api.command.register(() => [
+  ctx.keymap.layer(() => ({
+    commands: [
       {
+        id: "goal.show",
         title: "Goal",
-        value: "goal.show",
-        category: "Goal",
         description: "Show the active goal for the current session",
-        onSelect: () => showGoalDialog(),
+        group: "Goal",
+        palette: true,
+        enabled: () => currentSession() !== undefined,
+        run: () => showGoal(),
       },
-    ])
-    api.lifecycle.onDispose(dispose)
+    ],
+  }))
+
+  return () => {
+    stopNotices()
+    removeSlot()
   }
 }
 
-// Plugin module shape required by the OpenCode TUI loader
-const tuiModule: TuiPluginModule = {
+export default {
   id: "goal-opencode.tui",
-  tui,
-}
-
-export default tuiModule
+  setup,
+} satisfies Plugin.Definition

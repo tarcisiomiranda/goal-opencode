@@ -1,0 +1,34 @@
+plan: opencode-v2
+title: "goal-opencode on OpenCode 2"
+created: 2026-10-12
+updated: 2026-10-12
+goal: "Ship a V2-only goal-opencode under github.com/tarcisiomiranda/goal-opencode"
+context:
+  - "Upstream martsallan/goal-opencode 0.3.1, MIT, last push 2026-06-11, V1 only"
+  - "Local OpenCode upgraded to 2.0.26 on 2026-10-11; goal-opencode was dropped from config"
+  - "Spec: specs/opencode-v2.spec.yaml"
+scope:
+  - "Rewrite server and TUI entrypoints on the V2 API"
+  - "Keep core.ts logic and tests"
+  - "Docs and CI for V2"
+  - "Publish to GitHub with gh after user confirms visibility"
+out_of_scope:
+  - "npm publish"
+  - "V1 compatibility layer"
+stages:
+  - id: port
+    status: done
+    note: "core, server, tui rewritten on the V2 API"
+  - id: verify
+    status: done
+    note: "mise run check green (35 tests); smoke tests on 2.0.26 for loop, interrupt, stagnation, hot reload and TUI sidebar"
+  - id: publish
+    status: todo
+    note: "gh repo create and push; then switch local opencode.json to the git spec"
+risks:
+  - "V2 plugin API is new and lightly documented; behavior verified against 2.0.26 only"
+rollback:
+  - "Remove the plugin entry from ~/.config/opencode/opencode.json and opencode service restart"
+decisions:
+  - "Keep upstream git history and add upstream remote for attribution"
+  - "Debug isolation used a throwaway opencode serve on 127.0.0.1 with an ephemeral password; background service stopped meanwhile"

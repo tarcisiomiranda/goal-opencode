@@ -1,0 +1,83 @@
+spec: opencode-v2
+title: "Port goal-opencode to the OpenCode 2 plugin API"
+status: in_progress
+created: 2026-10-12
+updated: 2026-10-12
+goal: "Run /goal mode (continuation loop, update_goal, sidebar) on OpenCode 2.0.x"
+problem: "goal-opencode 0.3.1 targets @opencode-ai/plugin 1.17; OpenCode 2 does not run V1 plugins"
+behavior:
+  - "/goal <objective> sets or replaces the goal and starts work"
+  - "/goal append <text>, pause, resume, clear and bare /goal keep V1 semantics"
+  - "While a goal is active every model request carries the goal protocol as a system part"
+  - "When the session goes idle with an active goal a synthetic continuation resumes it"
+  - "update_goal with status complete marks the goal complete; ::GOAL_DONE:: afterwards clears it"
+  - "User interrupt pauses the goal as interrupted; the next real user prompt resumes it"
+  - "Three continuations in a row without tool calls pause the goal as manual"
+  - "Sidebar shows objective, status and elapsed time; palette command Goal opens a dialog"
+requirements_functional:
+  - "Server entry exports a V2 plugin object with id and setup"
+  - "TUI entry exports a V2 TUI plugin object with id and setup"
+  - "Goal state lives in session metadata under the goal-opencode key"
+  - "Server notices reach the TUI through the same metadata key and render as toasts"
+requirements_non_functional:
+  - "No runtime npm dependencies; host provides @opentui/solid and solid-js"
+  - "Works against a remote server because the TUI reads only server data"
+constraints:
+  - "OpenCode >= 2.0.26; V1 hosts are not supported"
+  - "core.ts stays pure and unit tested"
+implemented:
+  - "core.ts shared helpers: parseGoalState, readGoalMetadata, interrupted, liveSeconds, statusLine, renderCompactionContext"
+  - "Server plugin on V2 API (command, tool, events, prompt/context/compaction hooks)"
+  - "TUI plugin on V2 API (sidebar slot, notice toasts, palette dialog)"
+  - "README, CHANGELOG, LICENSE and bun CI for V2; npm publish workflow removed"
+  - "Smoke tests on OpenCode 2.0.26: set, continuation loop, update_goal, interrupt pause/resume, stagnation cap, hot reload, TUI sidebar render"
+pending:
+  - "Publish to github.com/tarcisiomiranda/goal-opencode and tag v1.0.0"
+  - "Toast and palette dialog not exercised interactively (sidebar render verified through a pty capture)"
+steps:
+  - id: core
+    desc: "Adapt core.ts helpers for the V2 system-part protocol"
+    status: done
+    verify: "mise run test"
+  - id: server
+    desc: "Rewrite src/index.ts on the V2 server plugin API"
+    status: done
+    verify: "mise run typecheck"
+  - id: tui
+    desc: "Rewrite src/tui.tsx on the V2 TUI plugin API"
+    status: done
+    verify: "mise run typecheck"
+  - id: docs
+    desc: "Update README, CHANGELOG, package.json and CI"
+    status: done
+    verify: "mise run check"
+  - id: smoke
+    desc: "Load plugin in local OpenCode 2 and run a goal end to end"
+    status: done
+    verify: "mise run check"
+acceptance:
+  - desc: "opencode plugin list shows goal-opencode loaded from the local checkout"
+    status: done
+  - desc: "A /goal run continues, calls update_goal and clears after ::GOAL_DONE::"
+    status: done
+  - desc: "mise run check passes"
+    status: done
+decisions:
+  - "Goal state moved from a JSON state file to session metadata so server and TUI share it without file paths"
+  - "Continuation uses session.synthetic with resume instead of a hidden trigger message plus messages transform"
+  - "Goal protocol is injected by the context hook as a system part; continuation text stays short"
+  - "Stagnation counts continuations that finished without any tool call, not finish reason stop"
+  - "::GOAL_DONE:: clears only a goal already marked complete by update_goal"
+  - "execution.failed pauses the goal as interrupted so a provider error does not loop"
+  - "No process signal handlers; the plugin runs inside the shared background server"
+  - "Active goals loaded by a fresh server process are demoted to paused interrupted"
+  - "Version 1.0.0 marks the OpenCode 2 line; npm publish workflow removed, install from git"
+  - "Continuation triggers on session.execution.succeeded because 2.0.26 does not deliver session.idle to plugins"
+  - "Each plugin instance handles only events whose location matches ctx.location; the host runs one instance per location and every instance sees the whole stream"
+  - "In-memory state lives in a globalThis registry keyed by location so hot reloads do not demote running goals"
+  - "update_goal is registered with codemode false so it is a direct tool the context hook can hide"
+  - "Local dev entry is the src directory because directory entries resolve <dir>/index and <dir>/tui, not package exports"
+risks:
+  - "Host must compile src/tui.tsx with the Solid JSX transform"
+  - "session.update metadata may replace instead of merge; writes merge the current metadata first"
+  - "Plugin hot reload demotes active goals; the next user prompt resumes them"
