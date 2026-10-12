@@ -1,6 +1,6 @@
 spec: opencode-v2
 title: "Port goal-opencode to the OpenCode 2 plugin API"
-status: in_progress
+status: done
 created: 2026-10-12
 updated: 2026-10-12
 goal: "Run /goal mode (continuation loop, update_goal, sidebar) on OpenCode 2.0.x"
@@ -31,8 +31,8 @@ implemented:
   - "TUI plugin on V2 API (sidebar slot, notice toasts, palette dialog)"
   - "README, CHANGELOG, LICENSE and bun CI for V2; npm publish workflow removed"
   - "Smoke tests on OpenCode 2.0.26: set, continuation loop, update_goal, interrupt pause/resume, stagnation cap, hot reload, TUI sidebar render"
+  - "Published as a public fork at github.com/tarcisiomiranda/goal-opencode, tag v1.0.0; git install verified end to end"
 pending:
-  - "Publish to github.com/tarcisiomiranda/goal-opencode and tag v1.0.0"
   - "Toast and palette dialog not exercised interactively (sidebar render verified through a pty capture)"
 steps:
   - id: core

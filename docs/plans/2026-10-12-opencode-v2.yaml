@@ -23,8 +23,8 @@ stages:
     status: done
     note: "mise run check green (35 tests); smoke tests on 2.0.26 for loop, interrupt, stagnation, hot reload and TUI sidebar"
   - id: publish
-    status: todo
-    note: "gh repo create and push; then switch local opencode.json to the git spec"
+    status: done
+    note: "Public fork created with gh, v1.0.0 tagged and pushed; local opencode.json uses the git spec"
 risks:
   - "V2 plugin API is new and lightly documented; behavior verified against 2.0.26 only"
 rollback:
