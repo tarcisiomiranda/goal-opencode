@@ -1,0 +1,55 @@
+spec: tui-package-load
+title: "TUI fails to load when goal-opencode is installed as a package"
+status: done
+created: 2026-10-14
+updated: 2026-10-16
+goal: "Load the goal sidebar from Git and npm installs, not only from a local src entry"
+problem: "v1.0.0 installed from Git shows Plugin failed; the log says Cannot find package react imported from node_modules/goal-opencode/src/tui.tsx"
+behavior:
+  - "A Git install of goal-opencode loads the TUI entry without errors"
+  - "The sidebar renders objective and status for a session with goal metadata"
+  - "Local directory entries keep loading src/tui.tsx with hot reload"
+requirements_functional:
+  - "package.json exports ./tui as a prebuilt dist/tui.js"
+  - "dist/tui.js is compiled with the Solid universal transform and imports only @opentui/solid and solid-js at runtime"
+  - "dist is part of the published files and committed to Git"
+requirements_non_functional:
+  - "No build step during install"
+  - "CI fails when dist/tui.js is out of date"
+constraints:
+  - "OpenCode >= 2.0.26"
+  - "Keep the documented peerDependencies on @opentui/core, @opentui/solid and solid-js"
+implemented:
+  - "scripts/build.ts bundles src/tui.tsx with @opentui/solid/bun-plugin into dist/tui.js"
+  - "mise task build; mise run check depends on it; CI rebuilds and runs git diff --exit-code on dist"
+  - "package.json 1.0.1: ./tui points to dist/tui.js, files include dist, no build script"
+  - "Isolated OpenCode 2.0.26 runs (XDG dirs in a scratch folder): v1.0.0 tarball reproduces the react error and the Plugin failed toast; the fixed package from a git+file spec loads and the sidebar shows Goal, the objective and Complete"
+pending:
+  - "Publish v1.0.1 to GitHub and point the local opencode.json at the new tag"
+steps:
+  - id: build
+    desc: "Prebuild the TUI entry with the Solid transform"
+    status: done
+    verify: "mise run build && test -s dist/tui.js && ! ag react dist/tui.js > /dev/null"
+  - id: package
+    desc: "Point ./tui at dist/tui.js and ship dist"
+    status: done
+    verify: "jq -r .exports[] package.json | ag '^./dist/tui.js$' > /dev/null && jq -r .files[] package.json | ag '^dist$' > /dev/null && jq -r .scripts.build package.json | ag '^null$' > /dev/null"
+  - id: checks
+    desc: "Typecheck, tests and build pass"
+    status: done
+    verify: "mise run check"
+acceptance:
+  - desc: "Git install loads the TUI without Plugin failed"
+    status: done
+  - desc: "Sidebar renders goal metadata from the installed package"
+    status: done
+decisions:
+  - "Ship prebuilt JS because the opentui Solid bun-plugin filter skips paths under node_modules"
+  - "Keep peers as documented; the host rewrites @opentui/* and solid-js imports from node_modules to its own copies, so installed peer copies stay unused"
+  - "Drop the build script from package.json because npm prepares Git dependencies that define one and that preparation fails inside OpenCode installs"
+  - "mise check runs build but not the dist diff, so local edits do not fail before staging; CI does the diff"
+  - "The OPENTUI_FORCE_UNICODE duplicate registration seen with a file tarball spec came from the unusual cache path, where the host does not rewrite imports; Git specs are not affected"
+risks:
+  - "Contributors can forget to commit dist; CI catches it"
+  - "A future host that stops rewriting node_modules imports would load the 0.6.x peer copies and hit the duplicate @opentui/core registration"

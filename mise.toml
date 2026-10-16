@@ -13,6 +13,10 @@ run = "bun test"
 description = "Typecheck TypeScript"
 run = "bun x tsc --noEmit"
 
+[tasks.build]
+description = "Gera dist/tui.js com o transform Solid"
+run = "bun run scripts/build.ts"
+
 [tasks.check]
-description = "Typecheck + testes"
-depends = ["typecheck", "test"]
+description = "Typecheck + testes + build"
+depends = ["typecheck", "test", "build"]

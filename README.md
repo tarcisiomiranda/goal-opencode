@@ -27,14 +27,14 @@ Add the Git package to `plugins` in `~/.config/opencode/opencode.json` (global) 
 
 ```jsonc
 {
-  "plugins": ["goal-opencode@git+https://github.com/tarcisiomiranda/goal-opencode.git#v1.0.0"]
+  "plugins": ["goal-opencode@git+https://github.com/tarcisiomiranda/goal-opencode.git#v1.0.1"]
 }
 ```
 
 Or install it with the CLI:
 
 ```bash
-opencode plugin add "goal-opencode@git+https://github.com/tarcisiomiranda/goal-opencode.git#v1.0.0"
+opencode plugin add "goal-opencode@git+https://github.com/tarcisiomiranda/goal-opencode.git#v1.0.1"
 ```
 
 The package exports a server entry (`.`) and a TUI entry (`./tui`); OpenCode loads both from the single `plugins` entry. No `cli.json` entry is needed.
@@ -55,7 +55,7 @@ OpenCode resolves a local directory entry to `<dir>/index.*` and `<dir>/tui.*`, 
 }
 ```
 
-Local plugins hot-reload on save. Set `GOAL_OPENCODE_DEBUG=1` in the server environment to print decision traces to its stderr (run `opencode serve` or `opencode --standalone --print-logs` to see them).
+Local entries load `src/tui.tsx` directly; package installs load the prebuilt `dist/tui.js`, because OpenCode only applies the Solid JSX transform outside `node_modules`. Local plugins hot-reload on save. Set `GOAL_OPENCODE_DEBUG=1` in the server environment to print decision traces to its stderr (run `opencode serve` or `opencode --standalone --print-logs` to see them).
 
 ## Commands
 
@@ -111,6 +111,8 @@ Tooling is pinned with [mise](https://mise.jdx.dev):
 mise run install
 mise run check
 ```
+
+`mise run check` also rebuilds `dist/tui.js`. Commit it together with any change to `src/tui.tsx` or `src/core.ts`.
 
 ## License
 

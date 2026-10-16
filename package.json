@@ -1,15 +1,16 @@
 {
   "name": "goal-opencode",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Long-running /goal mode for OpenCode 2 with auto-continuation, completion detection and a goal sidebar widget",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./tui": "./src/tui.tsx"
+    "./tui": "./dist/tui.js"
   },
   "files": [
     "src",
+    "dist",
     "!src/**/*.test.ts",
     "README.md",
     "CHANGELOG.md",

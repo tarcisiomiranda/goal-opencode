@@ -5,6 +5,15 @@ All notable changes to `goal-opencode` are documented here. Versions up to 0.3.1
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-10-16
+
+### Fixed
+- The TUI failed to load when installed from Git or npm (`Plugin failed`, `Cannot find package 'react'`). OpenCode applies the Solid JSX transform only to files outside `node_modules`, so `./tui` now points to a prebuilt `dist/tui.js` compiled with `@opentui/solid/bun-plugin`.
+
+### Changed
+- `dist/tui.js` is committed; regenerate it with `mise run build`. CI fails when it is out of date.
+- No `build` script in `package.json`: npm prepares Git dependencies that have one, and that preparation fails during OpenCode installs.
+
 ## [1.0.0] - 2026-10-12
 
 OpenCode 2 port. This release targets OpenCode >= 2.0.26 only; OpenCode 1.x users should stay on `@martsallan/goal-opencode@0.3.1`.
