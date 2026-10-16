@@ -24,8 +24,7 @@ implemented:
   - "mise task build; mise run check depends on it; CI rebuilds and runs git diff --exit-code on dist"
   - "package.json 1.0.1: ./tui points to dist/tui.js, files include dist, no build script"
   - "Isolated OpenCode 2.0.26 runs (XDG dirs in a scratch folder): v1.0.0 tarball reproduces the react error and the Plugin failed toast; the fixed package from a git+file spec loads and the sidebar shows Goal, the objective and Complete"
-pending:
-  - "Publish v1.0.1 to GitHub and point the local opencode.json at the new tag"
+  - "Published as tag v1.0.1 (db33dff); local opencode.json uses the tag; real TUI renders the sidebar with no Plugin failed and no log errors"
 steps:
   - id: build
     desc: "Prebuild the TUI entry with the Solid transform"
